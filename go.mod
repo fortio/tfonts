@@ -1,6 +1,6 @@
-module github.com/ldemailly/go-scratch/tfonts
+module fortio.org/tfonts
 
-go 1.24.6
+go 1.23.0
 
 require (
 	fortio.org/cli v1.10.0

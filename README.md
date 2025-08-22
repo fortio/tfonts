@@ -9,7 +9,15 @@ Heavy lifting is using [ansipixels](https://github.com/fortio/terminal#fortioorg
 ## Install
 
 ```sh
-go install github.com/ldemailly/go-scratch/tfonts@latest
+go install fortio.org/tfonts@latest
+```
+or one of the binaries in releases or
+```sh
+brew install fortio/tap/tfonts
+```
+or
+```
+docker run -ti fortio/tfonts
 ```
 
 ## Example
