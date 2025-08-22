@@ -31,3 +31,8 @@ go.work.sum
 # .idea/
 # .vscode/
 tfonts
+
+.golangci.yml
+.DS_Store
+.goreleaser.yaml
+.gr

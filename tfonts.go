@@ -109,11 +109,12 @@ func Main() int {
 	}()
 	fs.ap.TrueColor = *trueColor
 	fs.ap.Gray = *grayFlag
-	if *monoFlag {
+	if *monoFlag { //nolint:nestif // it's not that bad, for now.
 		fs.ap.TrueColor = false
 		fs.ap.Color256 = false
 		if *singleColor != "" {
-			c, err := tcolor.FromString(*singleColor)
+			var c tcolor.Color
+			c, err = tcolor.FromString(*singleColor)
 			if err != nil {
 				return log.FErrf("invalid color %q: %v", *singleColor, err)
 			}
@@ -121,7 +122,7 @@ func Main() int {
 			if t != tcolor.ColorTypeBasic {
 				return log.FErrf("For mono, use basic color, got %s", c.String())
 			}
-			fs.ap.MonoColor = tcolor.BasicColor(v)
+			fs.ap.MonoColor = tcolor.BasicColor(v) //nolint:gosec // returns 0-16
 		}
 	}
 	terminal.LoggerSetup(&terminal.CRLFWriter{Out: fs.ap.Out})
@@ -133,7 +134,8 @@ func Main() int {
 	if err = fs.ColorSetup(); err != nil {
 		return log.FErrf("failed to set up color(s): %v", err)
 	}
-	return fs.RunFonts()
+	fs.RunFonts()
+	return 0
 }
 
 func (fs *FState) LinesAndRune(runeFlag string) error {
@@ -203,9 +205,9 @@ func (fs *FState) ColorSetup() error {
 	if fs.FixedSeed > 0 {
 		src = rand.NewPCG(uint64(fs.FixedSeed), 0)
 	} else {
-		src = rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64()))
+		src = rand.New(rand.NewPCG(rand.Uint64(), rand.Uint64())) //nolint:gosec // not crypto
 	}
-	fs.rnd = rand.New(src)
+	fs.rnd = rand.New(src) //nolint:gosec // not crypto
 	fs.textColor = color.RGBA{R: 255, G: 255, B: 255, A: 255}
 	if !fs.Monochrome && fs.SingleColor != "" {
 		c, err := tcolor.FromString(fs.SingleColor)
@@ -223,7 +225,7 @@ func (fs *FState) ColorSetup() error {
 }
 
 func (fs *FState) ErrorDeleteEntry(err error, fmt string, args ...any) {
-	if errors.Is(err, NoGlyphErr) {
+	if errors.Is(err, ErrNoGlyph) {
 		log.Infof(fmt, args...)
 	} else {
 		log.Errf(fmt, args...)
@@ -231,7 +233,7 @@ func (fs *FState) ErrorDeleteEntry(err error, fmt string, args ...any) {
 	fs.fonts = slices.Delete(fs.fonts, fs.fidx, fs.fidx+1)
 }
 
-func (fs *FState) RunFonts() int {
+func (fs *FState) RunFonts() {
 	for fs.fidx < len(fs.fonts) {
 		// optionally change color each time
 		if !fs.Monochrome && fs.SingleColor == "" {
@@ -244,7 +246,7 @@ func (fs *FState) RunFonts() int {
 			continue
 		}
 		if fs.done {
-			return 0
+			return
 		}
 		if fs.goBack {
 			fs.fidx = max(fs.fidx-1, 0)
@@ -255,7 +257,6 @@ func (fs *FState) RunFonts() int {
 	fs.ap.MoveCursor(0, 1)
 	fs.ap.EndSyncMode()
 	log.Infof("Total fonts processed: %d", fs.total)
-	return 0
 }
 
 func (fs *FState) ProcessOneFile() error {
@@ -306,7 +307,7 @@ func (fs *FState) ProcessOneFile() error {
 	return nil
 }
 
-var NoGlyphErr = errors.New("no glyph for rune")
+var ErrNoGlyph = errors.New("no glyph for rune")
 
 func (fs *FState) ProcessSubFont(fc *opentype.Collection, i, numSubFonts int) error {
 	var buf sfnt.Buffer
@@ -319,7 +320,7 @@ func (fs *FState) ProcessSubFont(fc *opentype.Collection, i, numSubFonts int) er
 		return err
 	}
 	if idx == 0 {
-		return fmt.Errorf("%w %c in font %s / %d", NoGlyphErr, fs.RuneToCheck, fs.fonts[fs.fidx], i+1)
+		return fmt.Errorf("%w %c in font %s / %d", ErrNoGlyph, fs.RuneToCheck, fs.fonts[fs.fidx], i+1)
 	}
 	name, err := face.Name(nil, sfnt.NameIDFull)
 	if err != nil {
@@ -329,6 +330,9 @@ func (fs *FState) ProcessSubFont(fc *opentype.Collection, i, numSubFonts int) er
 	offsetY := 6
 	offsetX := 3
 	ff, err := opentype.NewFace(face, &opentype.FaceOptions{Size: fs.FontSize, DPI: 72, Hinting: font.HintingFull})
+	if err != nil {
+		return err
+	}
 	fs.ap.OnResize = func() error {
 		img := image.NewRGBA(image.Rect(0, 0, fs.ap.W, fs.ap.H*2))
 		// fill img with bgcolor using uniform color
@@ -352,7 +356,7 @@ func (fs *FState) ProcessSubFont(fc *opentype.Collection, i, numSubFonts int) er
 		}
 		fs.ap.StartSyncMode()
 		fs.ap.ClearScreen()
-		fs.ap.ShowScaledImage(img)
+		_ = fs.ap.ShowScaledImage(img)
 		subfontInfo := ""
 		if numSubFonts > 1 {
 			subfontInfo = fmt.Sprintf("(subfont %d/%d) ", i+1, numSubFonts)
@@ -361,12 +365,12 @@ func (fs *FState) ProcessSubFont(fc *opentype.Collection, i, numSubFonts int) er
 		return nil
 	}
 	fs.total++
-	fs.ap.OnResize()
+	_ = fs.ap.OnResize()
 	if fs.AutoPlay > 0 {
 		fs.ap.EndSyncMode()
-		fs.ap.ReadOrResizeOrSignalOnce()
+		_, err = fs.ap.ReadOrResizeOrSignalOnce()
 	} else {
-		fs.ap.ReadOrResizeOrSignal()
+		err = fs.ap.ReadOrResizeOrSignal()
 	}
-	return nil
+	return err
 }
