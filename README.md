@@ -64,3 +64,7 @@ flags:
   -truecolor
          Use true color (24-bit) instead of 256 colors (default true)
 ```
+
+
+Ps: this was originally developed under my personal scratch repo
+[github.com/ldemailly/go-scratch/tree/main/tfonts](https://github.com/ldemailly/go-scratch/tree/main/tfonts) but got pretty good enough and clean enough to migrate here. Also thanks to the fine folks in Ghostty discord TUI channel for inspiration and ideas.
