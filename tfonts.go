@@ -34,6 +34,7 @@ func main() {
 type FState struct {
 	// Input
 	FontFile    string
+	FontFace    int
 	FontDir     string
 	FontSize    float64
 	Line1       string
@@ -76,7 +77,10 @@ func Main() int {
 	runeFlag := flag.String("rune", "", "Rune to check for in fonts (default: first `rune` of first line)")
 	autoPlayFlag := flag.Duration("autoplay", 0, "If > 0, automatically advance to next font after this duration (e.g. 2s, 500ms)")
 	fontFlag := flag.String("font", "", "Font `path` to use instead of showing all the fonts in fontdir")
+	faceIdxFlag := flag.Int("index", 0, "When given a ttc -font, use the specified index font instead of first one/all variants")
 	allVariantsFlag := flag.Bool("all", false, "Show all font variants (default is only the first found per file)")
+	logStderrFlag := flag.Bool("logger-stderr", false,
+		"Revert to normal logger behavior, to stderr instead of hooked into terminal writer (debug use only)")
 	cli.MaxArgs = -1
 	cli.ArgsHelp = "2 lines of words to use or default text"
 	cli.Main()
@@ -89,6 +93,7 @@ func Main() int {
 		FixedSeed:   *fixedSeed,
 		Monochrome:  *monoFlag,
 		SingleColor: *singleColor,
+		FontFace:    *faceIdxFlag,
 	}
 	err := fs.LinesAndRune(*runeFlag)
 	if err != nil {
@@ -125,7 +130,9 @@ func Main() int {
 			fs.ap.MonoColor = tcolor.BasicColor(v) //nolint:gosec // returns 0-16
 		}
 	}
-	terminal.LoggerSetup(&terminal.CRLFWriter{Out: fs.ap.Out})
+	if !*logStderrFlag {
+		terminal.LoggerSetup(&terminal.CRLFWriter{Out: fs.ap.Out})
+	}
 	fs.ap.SyncBackgroundColor()
 	if err = fs.FontsList(); err != nil {
 		return log.FErrf("failed to list fonts: %v", err)
@@ -274,7 +281,7 @@ func (fs *FState) ProcessOneFile() error {
 	}
 	log.LogVf("Loaded font: %s", f)
 	numSubFonts := fc.NumFonts()
-	i := 0
+	i := fs.FontFace
 	for i < numSubFonts {
 		if err := fs.ProcessSubFont(fc, i, numSubFonts); err != nil {
 			return err
@@ -332,6 +339,10 @@ func (fs *FState) ProcessSubFont(fc *opentype.Collection, i, numSubFonts int) er
 	ff, err := opentype.NewFace(face, &opentype.FaceOptions{Size: fs.FontSize, DPI: 72, Hinting: font.HintingFull})
 	if err != nil {
 		return err
+	}
+	if log.Log(log.Verbose) {
+		metrics := ff.Metrics()
+		log.LogVf("Font metrics: %#v", metrics)
 	}
 	fs.ap.OnResize = func() error {
 		img := image.NewRGBA(image.Rect(0, 0, fs.ap.W, fs.ap.H*2))
