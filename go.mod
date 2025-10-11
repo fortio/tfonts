@@ -1,12 +1,12 @@
 module fortio.org/tfonts
 
-go 1.23.0
+go 1.24.0
 
 require (
 	fortio.org/cli v1.12.2
 	fortio.org/log v1.18.1
 	fortio.org/terminal v0.60.1
-	golang.org/x/image v0.30.0
+	golang.org/x/image v0.32.0
 )
 
 require (
@@ -19,5 +19,5 @@ require (
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20250406160420-959f8f3db0fb // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/term v0.34.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/text v0.30.0 // indirect
 )
