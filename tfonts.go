@@ -373,12 +373,12 @@ func (fs *FState) ProcessSubFont(fc *opentype.Collection, i, numSubFonts int) er
 			subfontInfo = fmt.Sprintf("(subfont %d/%d) ", i+1, numSubFonts)
 		}
 		fs.ap.WriteAt(0, 0, "%d/%d %s%s ", fs.fidx+1, len(fs.fonts), subfontInfo, name)
+		fs.ap.EndSyncMode()
 		return nil
 	}
 	fs.total++
 	_ = fs.ap.OnResize()
 	if fs.AutoPlay > 0 {
-		fs.ap.EndSyncMode()
 		_, err = fs.ap.ReadOrResizeOrSignalOnce()
 	} else {
 		err = fs.ap.ReadOrResizeOrSignal()
