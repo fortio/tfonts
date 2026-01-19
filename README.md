@@ -42,29 +42,34 @@ or 1 of the special arguments
         tfonts {help|envhelp|version|buildinfo}
 flags:
   -all
-         Show all font variants (default is only the first found per file)
+        Show all font variants (default is only the first found per file)
   -autoplay duration
-         If > 0, automatically advance to next font after this duration (e.g. 2s, 500ms)
+        If > 0, automatically advance to next font after this duration (e.g. 2s, 500ms)
   -color string
-         Single text color, if empty use random colors
+        Single text color, if empty use random colors
   -font path
-         Font path to use instead of showing all the fonts in fontdir
+        Font path to use instead of showing all the fonts in fontdir
   -fontdir path
-         Directory path containing font files (default "/System/Library/Fonts")
+        Directory path containing font files (default "/System/Library/Fonts")
   -gray
-         Use grayscale
+        Use grayscale
+  -index int
+        When given a ttc -font, use the specified index font instead of first one/all variants
   -mono
-         Use monochrome (1-bit) color
+        Use monochrome (1-bit) color
   -rune rune
-         Rune to check for in fonts (default: first rune of first line)
+        Rune to check for in fonts (default: first rune of first line)
   -seed int
-         set fixed seed, 0 is random one
+        set fixed seed, 0 is random one
   -size points
-         Font size in points (default 36)
+        Font size in points (default 36)
+  -stealth
+        Stealth mode - use noise animation for un screenshotable text
   -truecolor
-         Use true color (24-bit) instead of 256 colors (default true)
+        Use true color (24-bit) instead of 256 colors (default true)
 ```
 
+Try the new `-stealth` flag and try to make a screenshot, it's fun!
 
 Ps: this was originally developed under my personal scratch repo
 [github.com/ldemailly/go-scratch/tree/main/tfonts](https://github.com/ldemailly/go-scratch/tree/main/tfonts) but got pretty good enough and clean enough to migrate here. Also thanks to the fine folks in Ghostty discord TUI channel for inspiration and ideas.

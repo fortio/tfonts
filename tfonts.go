@@ -21,6 +21,7 @@ import (
 	"fortio.org/terminal"
 	"fortio.org/terminal/ansipixels"
 	"fortio.org/terminal/ansipixels/tcolor"
+	"fortio.org/tfonts/noise"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/font/sfnt"
@@ -45,6 +46,7 @@ type FState struct {
 	FixedSeed   int64
 	Monochrome  bool
 	SingleColor string
+	Stealth     bool
 	// Internal
 	rnd       *rand.Rand
 	ap        *ansipixels.AnsiPixels
@@ -74,6 +76,7 @@ func Main() int {
 	trueColor := flag.Bool("truecolor", defaultTruecolor, "Use true color (24-bit) instead of 256 colors")
 	monoFlag := flag.Bool("mono", false, "Use monochrome (1-bit) color")
 	grayFlag := flag.Bool("gray", false, "Use grayscale")
+	stealthFlag := flag.Bool("stealth", false, "Stealth mode - use noise animation for un screenshotable text")
 	runeFlag := flag.String("rune", "", "Rune to check for in fonts (default: first `rune` of first line)")
 	autoPlayFlag := flag.Duration("autoplay", 0, "If > 0, automatically advance to next font after this duration (e.g. 2s, 500ms)")
 	fontFlag := flag.String("font", "", "Font `path` to use instead of showing all the fonts in fontdir")
@@ -94,6 +97,7 @@ func Main() int {
 		Monochrome:  *monoFlag,
 		SingleColor: *singleColor,
 		FontFace:    *faceIdxFlag,
+		Stealth:     *stealthFlag,
 	}
 	err := fs.LinesAndRune(*runeFlag)
 	if err != nil {
@@ -114,7 +118,7 @@ func Main() int {
 	}()
 	fs.ap.TrueColor = *trueColor
 	fs.ap.Gray = *grayFlag
-	if *monoFlag { //nolint:nestif // it's not that bad, for now.
+	if *monoFlag /*|| *stealthFlag*/ { //nolint:nestif // it's not that bad, for now.
 		fs.ap.TrueColor = false
 		fs.ap.Color256 = false
 		if *singleColor != "" {
@@ -344,11 +348,21 @@ func (fs *FState) ProcessSubFont(fc *opentype.Collection, i, numSubFonts int) er
 		metrics := ff.Metrics()
 		log.LogVf("Font metrics: %#v", metrics)
 	}
+	var bgImage *image.RGBA
+	var ticker *time.Ticker
+	if fs.Stealth {
+		bgImage = noise.BackgroundNoise(fs.ap.W, fs.ap.H*2, fs.textColor, 0.5)
+		ticker = time.NewTicker(10 * time.Millisecond)
+		defer ticker.Stop()
+	}
 	fs.ap.OnResize = func() error {
-		img := image.NewRGBA(image.Rect(0, 0, fs.ap.W, fs.ap.H*2))
-		// fill img with bgcolor using uniform color
+		var img *image.RGBA
 		bgColor := color.RGBA{R: fs.ap.Background.R, G: fs.ap.Background.G, B: fs.ap.Background.B, A: 255}
-		draw.Draw(img, img.Bounds(), image.NewUniform(bgColor), image.Point{}, draw.Src)
+		img = image.NewRGBA(image.Rect(0, 0, fs.ap.W, fs.ap.H*2))
+		// fill img with bgcolor using uniform color
+		if !fs.Stealth {
+			draw.Draw(img, img.Bounds(), image.NewUniform(bgColor), image.Point{}, draw.Src)
+		}
 		d := &font.Drawer{
 			Dst:  img,
 			Src:  image.NewUniform(fs.textColor),
@@ -365,6 +379,9 @@ func (fs *FState) ProcessSubFont(fc *opentype.Collection, i, numSubFonts int) er
 			d.Dot.Y = fixed.I(2*(fs.ap.H-2) - offsetY)
 			d.DrawString(fs.Line2)
 		}
+		if fs.Stealth {
+			img = noise.Apply(bgImage, img, 0.5) 
+		}
 		fs.ap.StartSyncMode()
 		fs.ap.ClearScreen()
 		_ = fs.ap.ShowScaledImage(img)
@@ -378,9 +395,25 @@ func (fs *FState) ProcessSubFont(fc *opentype.Collection, i, numSubFonts int) er
 	}
 	fs.total++
 	_ = fs.ap.OnResize()
-	if fs.AutoPlay > 0 {
+	switch {
+	case fs.Stealth:
+		for {
+			_, err = fs.ap.ReadOrResizeOrSignalOnce()
+			if len(fs.ap.Data) > 0 {
+				if fs.ap.Data[0] == ' ' {
+					// pause
+					err = fs.ap.ReadOrResizeOrSignal()
+					continue
+				}
+				// else we do normal processing of q/esc/backspace/arrows
+				break
+			}
+			<-ticker.C
+			_ = fs.ap.OnResize()
+		}
+	case fs.AutoPlay > 0:
 		_, err = fs.ap.ReadOrResizeOrSignalOnce()
-	} else {
+	default:
 		err = fs.ap.ReadOrResizeOrSignal()
 	}
 	return err
