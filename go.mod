@@ -6,7 +6,7 @@ require (
 	fortio.org/cli v1.12.3
 	fortio.org/log v1.18.3
 	fortio.org/terminal v0.65.3
-	golang.org/x/image v0.44.0
+	golang.org/x/image v0.45.0
 )
 
 require (
@@ -19,5 +19,5 @@ require (
 	golang.org/x/crypto/x509roots/fallback v0.0.0-20251111182123-122a78f140d9 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/term v0.45.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
+	golang.org/x/text v0.41.0 // indirect
 )
